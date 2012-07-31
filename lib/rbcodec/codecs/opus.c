@@ -319,6 +319,7 @@ enum codec_status codec_run(void)
     OpusDecoder *st = NULL;
     OpusHeader header;
     int ret;
+    unsigned long strtoffset = ci->id3->offset;
 
     /* reset our simple malloc */
     if (codec_init()) {
@@ -417,6 +418,12 @@ enum codec_status codec_run(void)
                 } else if (op.packetno == 1) {
                     /* Comment header */
                 } else {
+                    if (strtoffset) {
+                        ci->seek_buffer(strtoffset);
+                        ogg_sync_reset(&oy);
+                        strtoffset = 0;
+                        break;//next page
+                    }
                     /* Decode audio packets */
                     ret = opus_decode(st, (unsigned char*) op.packet, op.bytes, output, MAX_FRAME_SIZE, 0);
 
