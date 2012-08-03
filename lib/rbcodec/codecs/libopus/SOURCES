@@ -95,7 +95,7 @@ silk/stereo_decode_pred.c
 //silk/stereo_quant_pred.c
 
 /* OPUS sources */
-opus.c
+//opus.c
 opus_decoder.c
 opus_header.c
 //opus_encoder.c
