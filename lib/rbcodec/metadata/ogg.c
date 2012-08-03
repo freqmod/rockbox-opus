@@ -106,8 +106,7 @@ bool get_ogg_metadata(int fd, struct mp3entry* id3)
     else if (memcmp(&buf[28], "OpusHead", 8) == 0)
     {
         id3->codectype = AFMT_OPUS;
-        temp = get_long_le(&buf[40]);
-        id3->frequency = (temp == 0) ? 48000 : temp;
+        id3->frequency = 48000;
         id3->vbr = true;
 
 // FIXME handle an actual channel mapping table
