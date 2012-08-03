@@ -62,7 +62,6 @@ bool get_ogg_metadata(int fd, struct mp3entry* id3)
     int segments, header_size;
     int i;
     bool eof = false;
-    int temp;
 
     /* 92 bytes is enough for both Vorbis and Speex headers */
     if ((lseek(fd, 0, SEEK_SET) < 0) || (read(fd, buf, 92) < 92))
