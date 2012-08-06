@@ -69,7 +69,7 @@ typedef struct {
    int pos;
 } ROPacket;
 
-static int write_uint32(Packet *p, uint32_t val)
+static int write_uint32(Packet *p, ogg_uint32_t val)
 {
    if (p->pos>p->maxlen-4)
       return 0;
@@ -81,7 +81,7 @@ static int write_uint32(Packet *p, uint32_t val)
    return 1;
 }
 
-static int write_uint16(Packet *p, uint16_t val)
+static int write_uint16(Packet *p, ogg_uint16_t val)
 {
    if (p->pos>p->maxlen-2)
       return 0;
@@ -101,24 +101,24 @@ static int write_chars(Packet *p, const unsigned char *str, int nb_chars)
    return 1;
 }
 
-static int read_uint32(ROPacket *p, uint32_t *val)
+static int read_uint32(ROPacket *p, ogg_uint32_t *val)
 {
    if (p->pos>p->maxlen-4)
       return 0;
-   *val =  (uint32_t)p->data[p->pos  ];
-   *val |= (uint32_t)p->data[p->pos+1]<< 8;
-   *val |= (uint32_t)p->data[p->pos+2]<<16;
-   *val |= (uint32_t)p->data[p->pos+3]<<24;
+   *val =  (ogg_uint32_t)p->data[p->pos  ];
+   *val |= (ogg_uint32_t)p->data[p->pos+1]<< 8;
+   *val |= (ogg_uint32_t)p->data[p->pos+2]<<16;
+   *val |= (ogg_uint32_t)p->data[p->pos+3]<<24;
    p->pos += 4;
    return 1;
 }
 
-static int read_uint16(ROPacket *p, uint16_t *val)
+static int read_uint16(ROPacket *p, ogg_uint16_t *val)
 {
    if (p->pos>p->maxlen-2)
       return 0;
-   *val =  (uint16_t)p->data[p->pos  ];
-   *val |= (uint16_t)p->data[p->pos+1]<<8;
+   *val =  (ogg_uint16_t)p->data[p->pos  ];
+   *val |= (ogg_uint16_t)p->data[p->pos+1]<<8;
    p->pos += 2;
    return 1;
 }
@@ -139,7 +139,7 @@ int opus_header_parse(const unsigned char *packet, int len, OpusHeader *h)
    char str[9];
    ROPacket p;
    unsigned char ch;
-   uint16_t shortval;
+   ogg_uint16_t shortval;
 
    p.data = packet;
    p.maxlen = len;
