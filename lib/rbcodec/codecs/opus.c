@@ -36,6 +36,8 @@
 
 CODEC_HEADER
 
+#define SEEK_REWIND 3840    /* 80 ms @ 48 kHz */
+
 /* the opus pseudo stack pointer */
 extern char *global_stack;
 
@@ -320,6 +322,9 @@ enum codec_status codec_run(void)
     OpusHeader header;
     int ret;
     unsigned long strtoffset = ci->id3->offset;
+    int skip = 0;
+    int64_t seek_target;
+    uint64_t granule_pos;
 
     /* reset our simple malloc */
     if (codec_init()) {
@@ -336,16 +341,7 @@ enum codec_status codec_run(void)
     uint16_t *output = (uint16_t*) codec_malloc(MAX_FRAME_SIZE*sizeof(uint16_t));
 
     ci->seek_buffer(0);
-
-    if (ci->id3->offset) {
-//        ci->seek_buffer(ci->id3->offset);
-//        ov_raw_seek(&vf, ci->id3->offset);
-//        ci->set_elapsed(ov_time_tell(&vf));
-//        ci->set_offset(ov_raw_tell(&vf));
-    }
-    else {
-        ci->set_elapsed(0);
-    }
+    ci->set_elapsed(0);
 
     while (1) {
         enum codec_command_action action = ci->get_command(&param);
@@ -354,23 +350,19 @@ enum codec_status codec_run(void)
             break;
 
         if (action == CODEC_ACTION_SEEK_TIME) {
-            if(st!=NULL){
-#define SAMPLERATE 48
-                LOGF("Opus seek page:%ld,%lld,%ld\n",
-		     (long)(param*48), page_granule, (long)param);
+            if (st != NULL) {
+                /* calculate granule to seek to (including seek rewind) */
+                seek_target = (48LL * param) + header.preskip;
+                skip = MIN(seek_target, SEEK_REWIND);
+                seek_target -= skip;
 
-                speex_seek_page_granule(((int64_t)param) * 48,
-                                        page_granule, &oy, 0);
-#undef SAMPLERATE
+                LOGF("Opus seek page:%lld,%lld,%ld\n",
+		            seek_target, page_granule, (long)param);
+                speex_seek_page_granule(seek_target, page_granule, &oy, 0);
             }
 
             ci->set_elapsed(param);
             ci->seek_complete();
-//            if (ov_time_seek(&vf, param)) {
-                //ci->logf("ov_time_seek failed");
-//            }
-
-//            ci->set_elapsed(ov_time_tell(&vf));
         }
 
         /*Get the ogg buffer for writing*/
@@ -389,6 +381,7 @@ enum codec_status codec_run(void)
             ogg_stream_pagein(&os, &og);
 
             page_granule = ogg_page_granulepos(&og);
+            granule_pos = page_granule;
 
             while ((ogg_stream_packetout(&os, &op) == 1) && !op.e_o_s) {
                 if (op.packetno == 0){
@@ -398,7 +391,8 @@ enum codec_status codec_run(void)
                         LOGF("Could not parse header");
                         goto done;
                     }
-                
+                    skip = header.preskip;
+
                     st = opus_decoder_create(sample_rate, header.channels, &ret);
                     if (ret != OPUS_OK) {
                         LOGF("opus_decoder_create failed %d", ret);
@@ -424,11 +418,30 @@ enum codec_status codec_run(void)
                         strtoffset = 0;
                         break;//next page
                     }
+
+                    /* report progress */
+                    ci->set_elapsed((granule_pos - header.preskip) / 48);
+
                     /* Decode audio packets */
-                    ret = opus_decode(st, (unsigned char*) op.packet, op.bytes, output, MAX_FRAME_SIZE, 0);
+                    ret = opus_decode(st, op.packet, op.bytes, output, MAX_FRAME_SIZE, 0);
 
                     if (ret > 0) {
-                        ci->pcmbuf_insert(output, NULL, ret);
+                        if (skip > 0) {
+                            if (ret <= skip) {
+                                /* entire output buffer is skipped */
+                                skip -= ret;
+                                ret = 0;
+                            } else {
+                                /* part of output buffer is played */
+                                ret -= skip;
+                                ci->pcmbuf_insert(&output[skip * header.channels], NULL, ret);
+                                skip = 0;
+                            }
+                        } else {
+                            /* entire buffer is played */
+                            ci->pcmbuf_insert(output, NULL, ret);
+                        }
+                        granule_pos += ret;
                     } else {
                         if (ret < 0) {
                             LOGF("opus_decode failed %d", ret);
@@ -438,7 +451,6 @@ enum codec_status codec_run(void)
                     }
                 }
             }
-            ci->set_elapsed(page_granule / 48);
         }
     }
     LOGF("Returned OK");
