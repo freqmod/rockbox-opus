@@ -223,7 +223,7 @@ OPUS_EXPORT int opus_encoder_init(
 
 /** Encodes an Opus frame.
   * The passed frame_size must an opus frame size for the encoder's sampling rate.
-  * For example, at 48kHz the permitted values are 120, 240, 480, or 960.
+  * For example, at 48kHz the permitted values are 120, 240, 480, 960, 1920, and 2880.
   * Passing in a duration of less than 10ms (480 samples at 48kHz) will
   * prevent the encoder from using the LPC or hybrid modes.
   * @param [in] st <tt>OpusEncoder*</tt>: Encoder state
@@ -243,7 +243,7 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_encode(
 
 /** Encodes an Opus frame from floating point input.
   * The passed frame_size must an opus frame size for the encoder's sampling rate.
-  * For example, at 48kHz the permitted values are 120, 240, 480, or 960.
+  * For example, at 48kHz the permitted values are 120, 240, 480, 960, 1920, and 2880.
   * Passing in a duration of less than 10ms (480 samples at 48kHz) will
   * prevent the encoder from using the LPC or hybrid modes.
   * @param [in] st <tt>OpusEncoder*</tt>: Encoder state
@@ -328,8 +328,20 @@ OPUS_EXPORT int opus_encoder_ctl(OpusEncoder *st, int request, ...) OPUS_ARG_NON
   * opus_decode() and opus_decode_float() return the number of samples (per channel) decoded from the packet.
   * If that value is negative, then an error has occured. This can occur if the packet is corrupted or if the audio
   * buffer is too small to hold the decoded audio.
-
-*/
+  *
+  * Opus is a stateful codec with overlapping blocks and as a result Opus
+  * packets are not coded independently of each other. Packets must be
+  * passed into the decoder serially and in the correct order for a correct
+  * decode. Lost packets can be replaced with loss concealment by calling
+  * the decoder with a null pointer and zero length for the missing packet.
+  *
+  * A single codec state may only be accessed from a single thread at
+  * a time and any required locking must be performed by the caller. Separate
+  * streams must be decoded with separate decoder states and can be decoded
+  * in parallel unless the library was compiled with NONTHREADSAFE_PSEUDOSTACK
+  * defined.
+  *
+  */
 
 /** Opus decoder state.
   * This contains the complete state of an Opus decoder.
