@@ -8,8 +8,6 @@ Opus:
 * copy files from opus/src/ and opus/include/ to lib/rbcodec/codecs/libopus
 * copy files from opus/celt to lib/rbcodec/codecs/libopus/celt
 * copy files from opus/silk to lib/rbcodec/codecs/libopus/silk
-* copy opus/silk/fixed/main_FIX.h to lib/rbcodec/codecs/libopus/silk
-* copy opus/silk/fixed/structs_FIX.h to lib/rbcodec/codecs/libopus/silk
 * rename opus config.h file to opus_config.h and replace #include "config.h",
   for example
 find . -name "*.h" -print | xargs sed -i 's/include "config.h"/include "opus_config.h"/g'
